@@ -1,6 +1,7 @@
-use serde::Deserialize;
-
 use std::path::PathBuf;
+
+use serde::Deserialize;
+use semver::Version;
 
 #[derive(Deserialize)]
 pub struct Config {
@@ -11,7 +12,7 @@ pub struct Config {
 
 #[derive(Deserialize)]
 pub struct Protoc {
-    pub version: String,
+    pub version: Version,
     pub includes: Vec<String>,
 }
 
