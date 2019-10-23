@@ -1,10 +1,68 @@
 mod direct;
 
 use std::path::PathBuf;
+use std::fs::{self, ReadDir, DirEntry};
 use std::io;
 
-trait Package: Iterator<Item = io::Result<PathBuf>> { }
+pub struct Package {
+    path: PathBuf,
+    content: Option<ReadDir>,
+}
 
-trait PackageWalker: Iterator {
-    type Package: Package;
+pub enum EntryType {
+    Proto(PathBuf),
+    Dir(PathBuf),
+    Unknown(PathBuf),
+}
+
+impl Package {
+    pub fn new<P: Into<PathBuf>>(path: P) -> Self {
+        let path = path.into();
+        Self { path, content: None }
+    }
+}
+
+impl Iterator for Package {
+    type Item = io::Result<EntryType>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let None = self.content {
+            match fs::read_dir(&self.path) {
+                Err(e) => return Some(Err(e)),
+                Ok(c) => self.content = Some(c),
+            }
+        }
+
+        let entry = self.content.as_mut().and_then(|c| c.next())?;
+        if let Err(e) = entry {
+            return Some(Err(e));
+        }
+
+        let entry = entry.unwrap();
+        Some(inspect_entry(&entry))
+    }
+}
+
+fn inspect_entry(entry: &DirEntry) -> io::Result<EntryType> {
+    let file_type = entry.file_type();
+    if let Err(e) = file_type {
+        return Err(e);
+    }
+
+    let file_type = file_type.unwrap();
+    let path = entry.path();
+
+    if file_type.is_dir() {
+        return Ok(EntryType::Dir(path));
+    }
+
+    if !file_type.is_file() {
+        return Ok(EntryType::Unknown(path));
+    }
+    
+    let filename = entry.file_name();
+    match filename.to_str().map_or(false, |n| n.ends_with(".proto")) {
+        true => Ok(EntryType::Proto(path)),
+        false => Ok(EntryType::Unknown(path)),
+    }
 }
