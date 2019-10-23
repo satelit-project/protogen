@@ -28,9 +28,22 @@ pub struct Plugins {
     pub output: PathBuf,
     pub options: Vec<String>,
     pub path: Option<PathBuf>,
+    pub strategy: GenerationStrategy,
 }
 
 #[derive(Deserialize)]
 pub struct GoConfig {
     pub import_path: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum GenerationStrategy {
+    Directory
+}
+
+impl Default for GenerationStrategy {
+    fn default() -> Self { 
+        GenerationStrategy::Directory
+    }
 }
