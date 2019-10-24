@@ -91,7 +91,7 @@ impl<'p, 'n> Compiler<'p, 'n> {
         self.take_ref(&self.cached_output).unwrap()
     }
 
-    fn take_ref<'a>(&'a self, cell: &'a RefCell<Option<String>>) -> Option<Ref<'a, str>> {
+    fn take_ref<'a>(&'a self, cell: &'a RefCell<Option<String>>) -> Option<Ref<str>> {
         let borrow = cell.borrow();
         if borrow.is_none() {
             return None;
