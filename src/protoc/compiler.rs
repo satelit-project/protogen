@@ -1,4 +1,3 @@
-use std::borrow::Borrow;
 use std::cell::{Ref, RefCell};
 use std::ffi::OsStr;
 
@@ -21,12 +20,7 @@ pub struct Plugin<'n> {
 }
 
 #[derive(Debug)]
-pub struct Arg<'r, 's> {
-    arg: ArgVariant<'r, 's>,
-}
-
-#[derive(Debug)]
-enum ArgVariant<'r, 's> {
+pub enum Arg<'r, 's> {
     Ref(Ref<'r, str>),
     Str(&'s str),
 }
@@ -58,16 +52,16 @@ impl<'p, 'n> Compiler<'p, 'n> {
         let mut buf = vec![];
         buf.reserve(self.include_paths.len() * 2 + self.proto_paths.len());
 
-        buf.push(Arg::from_str(self.path));
+        buf.push(Arg::Str(self.path));
         for include in &self.include_paths {
-            buf.push(Arg::from_str("-I"));
-            buf.push(Arg::from_str(include));
+            buf.push(Arg::Str("-I"));
+            buf.push(Arg::Str(include));
         }
 
-        buf.push(Arg::from_ref(self.options()));
-        buf.push(Arg::from_ref(self.output()));
+        buf.push(Arg::Ref(self.options()));
+        buf.push(Arg::Ref(self.output()));
         for proto in &self.proto_paths {
-            buf.push(Arg::from_str(proto));
+            buf.push(Arg::Str(proto));
         }
 
         buf
@@ -131,25 +125,11 @@ impl<'n> Plugin<'n> {
     }
 }
 
-impl<'r, 's> Arg<'r, 's> {
-    fn from_ref(r: Ref<'r, str>) -> Self {
-        Arg {
-            arg: ArgVariant::Ref(r),
-        }
-    }
-
-    fn from_str(s: &'s str) -> Self {
-        Arg {
-            arg: ArgVariant::Str(s),
-        }
-    }
-}
-
 impl<'r, 's> AsRef<OsStr> for Arg<'r, 's> {
     fn as_ref(&self) -> &OsStr {
-        match self.arg.borrow() {
-            ArgVariant::Ref(r) => r.as_ref(),
-            ArgVariant::Str(s) => OsStr::new(s),
+        match self {
+            Arg::Ref(r) => r.as_ref(),
+            Arg::Str(s) => OsStr::new(s),
         }
     }
 }
