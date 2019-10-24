@@ -4,8 +4,9 @@ use reqwest::Client;
 use serde::Deserialize;
 use regex::Regex;
 
-use crate::protoc::DownloadError;
+use super::DownloadError;
 use super::ProtocDownloader;
+use std::time::Duration;
 
 pub struct GithubDownloader {
     client: Client,
@@ -64,5 +65,17 @@ impl ProtocDownloader for GithubDownloader {
         }
 
         Err(DownloadError::NotFound)
+    }
+}
+
+impl Default for GithubDownloader {
+    fn default() -> Self {
+        let client = reqwest::ClientBuilder::new()
+            .gzip(true)
+            .connect_timeout(Duration::from_secs(30))
+            .build()
+            .expect("Failed to create HTTP client");
+
+        GithubDownloader::new(client)
     }
 }

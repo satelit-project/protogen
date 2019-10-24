@@ -5,6 +5,7 @@ use std::path::{PathBuf, Path};
 use std::fs::{self, ReadDir, DirEntry};
 use std::io;
 
+// TODO: support excludes
 pub struct PagingProtoWalker<'p, F, W> {
     path: &'p Path,
     make_walker: F,
