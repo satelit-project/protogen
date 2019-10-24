@@ -1,8 +1,8 @@
 use std::path::{Path, PathBuf};
 
+use regex::Regex;
 use reqwest::Client;
 use serde::Deserialize;
-use regex::Regex;
 
 use super::DownloadError;
 use super::ProtocDownloader;
@@ -45,7 +45,10 @@ impl GithubDownloader {
 
 impl ProtocDownloader for GithubDownloader {
     fn download(&self, tag: &str, platform: &str, path: &Path) -> Result<String, DownloadError> {
-        let url = format!("https://api.github.com/repos/protocolbuffers/protobuf/releases/tags/{}", tag);
+        let url = format!(
+            "https://api.github.com/repos/protocolbuffers/protobuf/releases/tags/{}",
+            tag
+        );
         let release = self.client.get(&url).send()?.json::<Release>()?;
 
         for asset in release.assets {
@@ -60,7 +63,7 @@ impl ProtocDownloader for GithubDownloader {
             };
 
             if asset_platform.as_str() == platform {
-                return self.download_asset(asset, path)
+                return self.download_asset(asset, path);
             }
         }
 

@@ -1,10 +1,10 @@
-mod layout;
 mod github;
+mod layout;
 
 use std::path::{Path, PathBuf};
 
-use semver::Version;
 use directories::BaseDirs;
+use semver::Version;
 use zip::ZipArchive;
 
 pub enum DownloadError {
@@ -27,8 +27,8 @@ pub struct ProtocProvider<D> {
 }
 
 impl<D> ProtocProvider<D>
-    where
-        D: ProtocDownloader
+where
+    D: ProtocDownloader,
 {
     pub fn new(version: Version, downloader: D) -> Option<Self> {
         let base_dirs = BaseDirs::new()?;
@@ -41,7 +41,13 @@ impl<D> ProtocProvider<D>
         let mut include_path = content_path.clone();
         layout::push_include_path(&mut include_path);
 
-        Some(ProtocProvider { version, content_path, binary_path, include_path, downloader })
+        Some(ProtocProvider {
+            version,
+            content_path,
+            binary_path,
+            include_path,
+            downloader,
+        })
     }
 
     pub fn binary_path(&self) -> Option<&Path> {
@@ -67,7 +73,9 @@ impl<D> ProtocProvider<D>
         let platform = layout::target_platform();
 
         self.clean_dir(&self.content_path)?;
-        let zip_name = self.downloader.download(&tag, platform, &self.content_path)?;
+        let zip_name = self
+            .downloader
+            .download(&tag, platform, &self.content_path)?;
         self.extract_zip(&zip_name)?;
 
         match (self.binary_path(), self.include_path()) {
@@ -114,7 +122,7 @@ impl<D> ProtocProvider<D>
             }
 
             #[cfg(unix)]
-                self.set_permissions(&zipfile, &out_path)?;
+            self.set_permissions(&zipfile, &out_path)?;
         }
 
         Ok(())
@@ -122,8 +130,8 @@ impl<D> ProtocProvider<D>
 
     #[cfg(unix)]
     fn set_permissions(&self, zipfile: &zip::read::ZipFile, path: &Path) -> std::io::Result<()> {
-        use std::os::unix::fs::PermissionsExt;
         use std::fs::{set_permissions, Permissions};
+        use std::os::unix::fs::PermissionsExt;
 
         if let Some(mode) = zipfile.unix_mode() {
             return set_permissions(&path, Permissions::from_mode(mode));

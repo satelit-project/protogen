@@ -1,6 +1,6 @@
+use std::borrow::Borrow;
 use std::cell::{Ref, RefCell};
 use std::ffi::OsStr;
-use std::borrow::Borrow;
 
 #[derive(Debug)]
 pub struct Compiler<'p, 'n> {
@@ -22,7 +22,7 @@ pub struct Plugin<'n> {
 
 #[derive(Debug)]
 pub struct Arg<'r, 's> {
-    arg: ArgVariant<'r, 's>
+    arg: ArgVariant<'r, 's>,
 }
 
 #[derive(Debug)]
@@ -36,7 +36,14 @@ impl<'p, 'n> Compiler<'p, 'n> {
         let include_paths = vec![];
         let proto_paths = vec![];
 
-        Self { path, include_paths, plugin, proto_paths, cached_options: RefCell::new(None), cached_output: RefCell::new(None) }
+        Self {
+            path,
+            include_paths,
+            plugin,
+            proto_paths,
+            cached_options: RefCell::new(None),
+            cached_output: RefCell::new(None),
+        }
     }
 
     pub fn add_include(&mut self, path: &'p str) {
@@ -103,7 +110,11 @@ impl<'p, 'n> Compiler<'p, 'n> {
 impl<'n> Plugin<'n> {
     pub fn new(name: &'n str, output: &'n str) -> Self {
         let options = vec![];
-        Self { name, output, options }
+        Self {
+            name,
+            output,
+            options,
+        }
     }
 
     pub fn add_option(&mut self, option: &'n str) {
@@ -122,11 +133,15 @@ impl<'n> Plugin<'n> {
 
 impl<'r, 's> Arg<'r, 's> {
     fn from_ref(r: Ref<'r, str>) -> Self {
-        Arg { arg: ArgVariant::Ref(r) }
+        Arg {
+            arg: ArgVariant::Ref(r),
+        }
     }
 
     fn from_str(s: &'s str) -> Self {
-        Arg { arg: ArgVariant::Str(s) }
+        Arg {
+            arg: ArgVariant::Str(s),
+        }
     }
 }
 

@@ -1,9 +1,9 @@
 mod deep;
 
-use std::marker::PhantomData;
-use std::path::{PathBuf, Path};
-use std::fs::{self, ReadDir, DirEntry};
+use std::fs::{self, DirEntry, ReadDir};
 use std::io;
+use std::marker::PhantomData;
+use std::path::{Path, PathBuf};
 
 // TODO: support excludes
 pub struct PagingProtoWalker<'p, F, W> {
@@ -26,7 +26,12 @@ pub enum EntryType {
 
 impl<'p, F, W> PagingProtoWalker<'p, F, W> {
     pub fn new(path: &'p Path, make_walker: F) -> Self {
-        Self { path, make_walker, content: None, _fret: PhantomData }
+        Self {
+            path,
+            make_walker,
+            content: None,
+            _fret: PhantomData,
+        }
     }
 }
 
@@ -41,7 +46,7 @@ where
         if self.content.is_none() {
             match fs::read_dir(self.path) {
                 Err(e) => return Some(Err(e)),
-                Ok(c) => self.content = Some(c)
+                Ok(c) => self.content = Some(c),
             };
         }
 
@@ -51,7 +56,7 @@ where
                 let make = &self.make_walker;
                 let walker = make(entry.path());
                 Some(Ok(walker))
-            },
+            }
         }
     }
 }
@@ -59,7 +64,10 @@ where
 impl Directory {
     pub fn new<P: Into<PathBuf>>(path: P) -> Self {
         let path = path.into();
-        Self { path, content: None }
+        Self {
+            path,
+            content: None,
+        }
     }
 }
 
@@ -100,7 +108,7 @@ fn inspect_entry(entry: &DirEntry) -> io::Result<EntryType> {
     if !file_type.is_file() {
         return Ok(EntryType::Unknown(path));
     }
-    
+
     let filename = entry.file_name();
     match filename.to_str().map_or(false, |n| n.ends_with(".proto")) {
         true => Ok(EntryType::Proto(path)),

@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
-use serde::Deserialize;
 use semver::Version;
+use serde::Deserialize;
 
 #[derive(Deserialize)]
 pub struct Config {
@@ -39,11 +39,11 @@ pub struct GoConfig {
 #[derive(Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum GenerationStrategy {
-    Directory
+    Directory,
 }
 
 impl Default for GenerationStrategy {
-    fn default() -> Self { 
+    fn default() -> Self {
         GenerationStrategy::Directory
     }
 }

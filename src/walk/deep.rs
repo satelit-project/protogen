@@ -1,5 +1,5 @@
-use std::path::PathBuf;
 use std::io;
+use std::path::PathBuf;
 
 use super::{Directory, EntryType};
 
@@ -24,12 +24,10 @@ impl Iterator for DeepProtoWalker {
             let mut package_empty = false;
 
             match package.next() {
-                Some(Ok(entry)) => {
-                    match entry {
-                        EntryType::Dir(path) => push_package = Some(path),
-                        EntryType::Proto(path) => return Some(Ok(path)),
-                        EntryType::Unknown(_) => continue,
-                    }
+                Some(Ok(entry)) => match entry {
+                    EntryType::Dir(path) => push_package = Some(path),
+                    EntryType::Proto(path) => return Some(Ok(path)),
+                    EntryType::Unknown(_) => continue,
                 },
                 Some(Err(e)) => return Some(Err(e)),
                 None => package_empty = true,
