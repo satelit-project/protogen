@@ -1,20 +1,20 @@
 use std::path::PathBuf;
 use std::io;
 
-use super::{Package, EntryType};
+use super::{Directory, EntryType};
 
-pub struct MultiPackageWalker {
-    children: Vec<Package>,
+pub struct DeepProtoWalker {
+    children: Vec<Directory>,
 }
 
-impl MultiPackageWalker {
+impl DeepProtoWalker {
     pub fn new<P: Into<PathBuf>>(path: P) -> Self {
-        let children = vec![Package::new(path)];
+        let children = vec![Directory::new(path)];
         Self { children }
     }
 }
 
-impl Iterator for MultiPackageWalker {
+impl Iterator for DeepProtoWalker {
     type Item = io::Result<PathBuf>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -40,7 +40,7 @@ impl Iterator for MultiPackageWalker {
             }
 
             if let Some(path) = push_package {
-                self.children.push(Package::new(path));
+                self.children.push(Directory::new(path));
             }
         }
 

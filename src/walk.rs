@@ -1,10 +1,18 @@
-mod direct;
+mod deep;
 
-use std::path::PathBuf;
+use std::marker::PhantomData;
+use std::path::{PathBuf, Path};
 use std::fs::{self, ReadDir, DirEntry};
 use std::io;
 
-pub struct Package {
+pub struct PagingProtoWalker<'p, F, W> {
+    path: &'p Path,
+    make_walker: F,
+    content: Option<ReadDir>,
+    _fret: PhantomData<W>,
+}
+
+pub struct Directory {
     path: PathBuf,
     content: Option<ReadDir>,
 }
@@ -15,14 +23,46 @@ pub enum EntryType {
     Unknown(PathBuf),
 }
 
-impl Package {
+impl<'p, F, W> PagingProtoWalker<'p, F, W> {
+    pub fn new(path: &'p Path, make_walker: F) -> Self {
+        Self { path, make_walker, content: None, _fret: PhantomData }
+    }
+}
+
+impl<F, W> Iterator for PagingProtoWalker<'_, F, W>
+where
+    W: Iterator<Item = io::Result<PathBuf>>,
+    F: Fn(PathBuf) -> W,
+{
+    type Item = io::Result<W>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.content.is_none() {
+            match fs::read_dir(self.path) {
+                Err(e) => return Some(Err(e)),
+                Ok(c) => self.content = Some(c)
+            };
+        }
+
+        match self.content.as_mut().and_then(|d| d.next())? {
+            Err(e) => return Some(Err(e)),
+            Ok(entry) => {
+                let make = &self.make_walker;
+                let walker = make(entry.path());
+                Some(Ok(walker))
+            },
+        }
+    }
+}
+
+impl Directory {
     pub fn new<P: Into<PathBuf>>(path: P) -> Self {
         let path = path.into();
         Self { path, content: None }
     }
 }
 
-impl Iterator for Package {
+impl Iterator for Directory {
     type Item = io::Result<EntryType>;
 
     fn next(&mut self) -> Option<Self::Item> {
