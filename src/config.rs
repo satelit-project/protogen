@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::ffi::OsString;
 
 use semver::Version;
 use serde::Deserialize;
@@ -6,14 +6,14 @@ use serde::Deserialize;
 #[derive(Deserialize)]
 pub struct Config {
     pub protoc: Protoc,
-    pub excludes: Vec<PathBuf>,
+    pub excludes: Vec<OsString>,
     pub generation: Generation,
 }
 
 #[derive(Deserialize)]
 pub struct Protoc {
     pub version: Version,
-    pub includes: Vec<String>,
+    pub includes: Vec<OsString>,
 }
 
 #[derive(Deserialize)]
@@ -25,9 +25,9 @@ pub struct Generation {
 #[derive(Deserialize)]
 pub struct Plugins {
     pub name: String,
-    pub output: PathBuf,
+    pub output: OsString,
     pub options: Vec<String>,
-    pub path: Option<PathBuf>,
+    pub path: Option<OsString>,
     pub strategy: GenerationStrategy,
 }
 
@@ -39,11 +39,11 @@ pub struct GoConfig {
 #[derive(Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum GenerationStrategy {
-    Directory,
+    Recursive,
 }
 
 impl Default for GenerationStrategy {
     fn default() -> Self {
-        GenerationStrategy::Directory
+        GenerationStrategy::Recursive
     }
 }
