@@ -1,20 +1,26 @@
+use std::collections::HashSet;
 use std::io;
 use std::path::PathBuf;
 
 use super::{Directory, EntryType};
 
-pub struct DeepProtoWalker {
+pub struct DeepProtoWalker<'e> {
     children: Vec<Directory>,
+    exclude: &'e HashSet<PathBuf>,
 }
 
-impl DeepProtoWalker {
-    pub fn new<P: Into<PathBuf>>(path: P) -> Self {
+impl<'e> DeepProtoWalker<'e> {
+    pub fn new<P: Into<PathBuf>>(path: P, exclude: &'e HashSet<PathBuf>) -> Self {
         let children = vec![Directory::new(path)];
-        Self { children }
+        Self { children, exclude }
+    }
+
+    fn should_skip(&self, path: &PathBuf) -> bool {
+        self.exclude.contains(path)
     }
 }
 
-impl Iterator for DeepProtoWalker {
+impl Iterator for DeepProtoWalker<'_> {
     type Item = io::Result<PathBuf>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -25,9 +31,17 @@ impl Iterator for DeepProtoWalker {
 
             match package.next() {
                 Some(Ok(entry)) => match entry {
-                    EntryType::Dir(path) => push_package = Some(path),
-                    EntryType::Proto(path) => return Some(Ok(path)),
-                    EntryType::Unknown(_) => continue,
+                    EntryType::Dir(path) => {
+                        if !self.should_skip(&path) {
+                            push_package = Some(path)
+                        }
+                    }
+                    EntryType::Proto(path) => {
+                        if !self.should_skip(&path) {
+                            return Some(Ok(path));
+                        }
+                    }
+                    _ => continue,
                 },
                 Some(Err(e)) => return Some(Err(e)),
                 None => package_empty = true,

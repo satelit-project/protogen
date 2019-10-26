@@ -83,7 +83,7 @@ impl Plugin {
             format!("--{}_opt", self.name).into(),
             options,
             OsString::from("--plugin"),
-            plugin
+            plugin,
         ]
     }
 }

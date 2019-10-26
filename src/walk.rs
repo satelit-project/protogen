@@ -1,50 +1,67 @@
 mod deep;
 
+use std::collections::HashSet;
 use std::fs::{self, DirEntry, ReadDir};
 use std::io;
 use std::marker::PhantomData;
 use std::path::{Path, PathBuf};
 
-// TODO: support excludes
-pub struct PagingProtoWalker<'p, F, W> {
-    path: &'p Path,
+pub struct PagingProtoWalker<F, W> {
+    path: PathBuf,
     make_walker: F,
     content: Option<ReadDir>,
+    exclude: HashSet<PathBuf>,
     _fret: PhantomData<W>,
 }
 
-pub struct Directory {
+struct Directory {
     path: PathBuf,
     content: Option<ReadDir>,
 }
 
-pub enum EntryType {
+enum EntryType {
     Proto(PathBuf),
     Dir(PathBuf),
     Unknown(PathBuf),
 }
 
-impl<'p, F, W> PagingProtoWalker<'p, F, W> {
-    pub fn new(path: &'p Path, make_walker: F) -> Self {
+impl<F, W> PagingProtoWalker<F, W> {
+    pub fn new<P: Into<PathBuf>>(path: P, make_walker: F) -> Self {
         Self {
-            path,
+            path: path.into(),
             make_walker,
             content: None,
+            exclude: HashSet::new(),
             _fret: PhantomData,
         }
     }
+
+    pub fn exclude<P: AsRef<Path>>(&mut self, path: P) -> io::Result<()> {
+        if !path.as_ref().is_relative() {
+            let err = io::Error::new(io::ErrorKind::InvalidInput, "related path expected");
+            return Err(err);
+        }
+
+        let mut absolute_path = self.path.to_owned();
+        absolute_path.push(path);
+        self.exclude.insert(absolute_path);
+
+        Ok(())
+    }
 }
 
-impl<F, W> Iterator for PagingProtoWalker<'_, F, W>
+impl<F, W> Iterator for PagingProtoWalker<F, W>
 where
     W: Iterator<Item = io::Result<PathBuf>>,
-    F: Fn(PathBuf) -> W,
+    F: for<'e> Fn(PathBuf, &'e HashSet<PathBuf>) -> W,
 {
     type Item = io::Result<W>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.content.is_none() {
-            match fs::read_dir(self.path) {
+            let dir = self.path.canonicalize().and_then(|p| fs::read_dir(p));
+
+            match dir {
                 Err(e) => return Some(Err(e)),
                 Ok(c) => self.content = Some(c),
             };
@@ -54,7 +71,7 @@ where
             Err(e) => return Some(Err(e)),
             Ok(entry) => {
                 let make = &self.make_walker;
-                let walker = make(entry.path());
+                let walker = make(entry.path(), &self.exclude);
                 Some(Ok(walker))
             }
         }
@@ -63,10 +80,26 @@ where
 
 impl Directory {
     pub fn new<P: Into<PathBuf>>(path: P) -> Self {
-        let path = path.into();
         Self {
-            path,
+            path: path.into(),
             content: None,
+        }
+    }
+
+    fn inspect_entry(&self, entry: &DirEntry) -> io::Result<EntryType> {
+        let file_type = entry.file_type()?;
+        let path = entry.path();
+
+        if file_type.is_dir() {
+            return Ok(EntryType::Dir(path));
+        } else if !file_type.is_file() {
+            return Ok(EntryType::Unknown(path));
+        }
+
+        let filename = entry.file_name();
+        match filename.to_str().map_or(false, |n| n.ends_with(".proto")) {
+            true => Ok(EntryType::Proto(path)),
+            false => Ok(EntryType::Unknown(path)),
         }
     }
 }
@@ -88,30 +121,6 @@ impl Iterator for Directory {
         }
 
         let entry = entry.unwrap();
-        Some(inspect_entry(&entry))
-    }
-}
-
-fn inspect_entry(entry: &DirEntry) -> io::Result<EntryType> {
-    let file_type = entry.file_type();
-    if let Err(e) = file_type {
-        return Err(e);
-    }
-
-    let file_type = file_type.unwrap();
-    let path = entry.path();
-
-    if file_type.is_dir() {
-        return Ok(EntryType::Dir(path));
-    }
-
-    if !file_type.is_file() {
-        return Ok(EntryType::Unknown(path));
-    }
-
-    let filename = entry.file_name();
-    match filename.to_str().map_or(false, |n| n.ends_with(".proto")) {
-        true => Ok(EntryType::Proto(path)),
-        false => Ok(EntryType::Unknown(path)),
+        Some(self.inspect_entry(&entry))
     }
 }
