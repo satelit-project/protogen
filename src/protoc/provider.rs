@@ -24,7 +24,7 @@ pub trait ProtocDownloader {
 
 pub struct ProtocProvider<D> {
     version: String,
-    caches_path: PathBuf,
+    protoc_path: PathBuf,
     binary_path: PathBuf,
     include_path: PathBuf,
     downloader: D,
@@ -38,6 +38,8 @@ where
         let version = format!("v{}", version);
 
         let mut caches_path = caches_path.into();
+        caches_path.push("protogen");
+        caches_path.push("protoc");
         caches_path.push(&version);
 
         let mut binary_path = caches_path.clone();
@@ -48,7 +50,7 @@ where
 
         ProtocProvider {
             version,
-            caches_path,
+            protoc_path: caches_path,
             binary_path,
             include_path,
             downloader,
@@ -76,10 +78,10 @@ where
     pub fn download(&self) -> Result<(), DownloadError> {
         let platform = layout::target_platform();
 
-        self.clean_dir(&self.caches_path)?;
+        self.clean_dir(&self.protoc_path)?;
         let zip_name = self
             .downloader
-            .download(&self.version, platform, &self.caches_path)?;
+            .download(&self.version, platform, &self.protoc_path)?;
         self.extract_zip(&zip_name)?;
 
         match (self.binary_path(), self.include_path()) {
@@ -89,6 +91,10 @@ where
     }
 
     fn clean_dir(&self, path: &Path) -> Result<(), std::io::Error> {
+        if !path.exists() {
+            return std::fs::create_dir_all(path);
+        }
+
         for content in path.read_dir()? {
             let content = content?;
             if content.file_type()?.is_dir() {
@@ -102,7 +108,7 @@ where
     }
 
     fn extract_zip(&self, name: &str) -> Result<(), std::io::Error> {
-        let mut path = PathBuf::from(&self.caches_path);
+        let mut path = PathBuf::from(&self.protoc_path);
         path.push(name);
 
         let mut file = std::fs::File::open(&path)?;
@@ -110,7 +116,8 @@ where
 
         for i in 0..archive.len() {
             let mut zipfile = archive.by_index(i).unwrap();
-            let out_path = zipfile.sanitized_name();
+            let mut out_path = PathBuf::from(&self.protoc_path);
+            out_path.push(zipfile.sanitized_name());
 
             if zipfile.name().ends_with('/') {
                 std::fs::create_dir_all(&out_path)?;

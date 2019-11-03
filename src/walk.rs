@@ -75,13 +75,24 @@ where
             };
         }
 
-        match self.content.as_mut().and_then(|d| d.next())? {
-            Err(e) => return Some(Err(e)),
-            Ok(entry) => {
-                let make = &self.make_walker;
-                let exclude = self.exclude.get_or_insert_with(|| Rc::new(HashSet::new()));
-                let walker = make(entry.path(), Rc::clone(exclude));
-                Some(Ok(walker))
+        loop {
+            match self.content.as_mut().and_then(|d| d.next())? {
+                Err(e) => return Some(Err(e)),
+                Ok(entry) => {
+                    let file_type = match entry.file_type() {
+                        Err(e) => return Some(Err(e)),
+                        Ok(t) => t,
+                    };
+
+                    if !file_type.is_dir() {
+                        continue;
+                    }
+
+                    let make = &self.make_walker;
+                    let exclude = self.exclude.get_or_insert_with(|| Rc::new(HashSet::new()));
+                    let walker = make(entry.path(), Rc::clone(exclude));
+                    return Some(Ok(walker))
+                }
             }
         }
     }

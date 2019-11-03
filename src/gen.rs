@@ -15,9 +15,10 @@ use crate::walk::{deep::DeepProtoWalker, PagingProtoWalker, Walker};
 
 #[derive(Debug)]
 pub enum GenerateError {
-    NoProtoc(Box<dyn fmt::Debug>),
+    NoProtoc(Box<dyn fmt::Debug + Send + Sync>),
     ReadDirFailed(io::Error),
-    GenerationFailed(Box<dyn fmt::Debug>),
+    InvocationFailed(Box<dyn fmt::Debug + Send + Sync>),
+    ProtocFailed(io::Error),
 }
 
 #[derive(Debug)]
@@ -45,9 +46,10 @@ impl Generator {
 
             for page in walker.clone() {
                 let page = page.map_err(|e| GenerateError::ReadDirFailed(e))?;
-                let command = self.command_for_page(compiler.clone(), page)?;
-
-                println!("page: {:?}\n", command);
+                let mut command = self.command_for_page(compiler.clone(), page)?;
+                command.current_dir(&self.root_path);
+                let mut child = command.spawn().map_err(|e| GenerateError::ProtocFailed(e))?;
+                child.wait().map_err(|e| GenerateError::ProtocFailed(e))?;
             }
         }
 
@@ -63,7 +65,7 @@ impl Generator {
             .map_err(|e| GenerateError::ReadDirFailed(e))?;
         let mut raw_command = compiler.command();
         if raw_command.is_empty() {
-            return Err(GenerateError::GenerationFailed(Box::new(
+            return Err(GenerateError::InvocationFailed(Box::new(
                 "empty invocation",
             )));
         }
@@ -99,6 +101,7 @@ impl Generator {
             compiler.add_include(path);
         }
 
+        compiler.add_include(&self.root_path);
         if let Some(includes) = includes {
             includes.into_iter().for_each(|i| compiler.add_include(i));
         }
@@ -140,9 +143,10 @@ impl From<DownloadError> for GenerateError {
 impl fmt::Display for GenerateError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            GenerateError::NoProtoc(_) => write!(f, "Proto compiler not found"),
+            GenerateError::NoProtoc(e) => write!(f, "Proto compiler not found: {:?}", e),
             GenerateError::ReadDirFailed(e) => write!(f, "Failed to read directory: {}", e),
-            GenerateError::GenerationFailed(_) => write!(f, "Proto generation failed"),
+            GenerateError::InvocationFailed(e) => write!(f, "Protoc invocation failed: {:?}", e),
+            GenerateError::ProtocFailed(e) => write!(f, "Protoc returned error: {}", e)
         }
     }
 }

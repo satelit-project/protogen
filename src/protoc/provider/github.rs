@@ -15,15 +15,13 @@ pub struct GithubDownloader {
 
 #[derive(Deserialize)]
 struct Release {
-    id: i32,
     assets: Vec<Asset>,
 }
 
 #[derive(Deserialize)]
 struct Asset {
-    id: i32,
     name: String,
-    url: String,
+    browser_download_url: String,
 }
 
 impl GithubDownloader {
@@ -37,7 +35,7 @@ impl GithubDownloader {
         path.push(&asset.name);
 
         let mut zip = std::fs::File::create(&path)?;
-        self.client.get(&asset.url).send()?.copy_to(&mut zip)?;
+        self.client.get(&asset.browser_download_url).send()?.copy_to(&mut zip)?;
 
         Ok(asset.name)
     }
