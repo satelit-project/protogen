@@ -2,11 +2,15 @@ mod github;
 mod layout;
 
 use std::path::{Path, PathBuf};
+use std::fmt;
+use std::error::Error;
 
-use directories::BaseDirs;
 use semver::Version;
 use zip::ZipArchive;
 
+pub use github::GithubDownloader;
+
+#[derive(Debug)]
 pub enum DownloadError {
     Io(std::io::Error),
     Request(reqwest::Error),
@@ -19,8 +23,8 @@ pub trait ProtocDownloader {
 }
 
 pub struct ProtocProvider<D> {
-    version: Version,
-    content_path: PathBuf,
+    version: String,
+    caches_path: PathBuf,
     binary_path: PathBuf,
     include_path: PathBuf,
     downloader: D,
@@ -30,24 +34,25 @@ impl<D> ProtocProvider<D>
 where
     D: ProtocDownloader,
 {
-    pub fn new(version: Version, downloader: D) -> Option<Self> {
-        let base_dirs = BaseDirs::new()?;
-        let mut content_path = PathBuf::from(base_dirs.cache_dir());
-        content_path.push(format!("v{}", &version));
+    pub fn new<P: Into<PathBuf>>(version: &Version, downloader: D, caches_path: P) -> Self {
+        let version = format!("v{}", version);
+        
+        let mut caches_path = caches_path.into();
+        caches_path.push(&version);
 
-        let mut binary_path = content_path.clone();
+        let mut binary_path = caches_path.clone();
         layout::push_binary_path(&mut binary_path);
 
-        let mut include_path = content_path.clone();
+        let mut include_path = caches_path.clone();
         layout::push_include_path(&mut include_path);
 
-        Some(ProtocProvider {
+        ProtocProvider {
             version,
-            content_path,
+            caches_path,
             binary_path,
             include_path,
             downloader,
-        })
+        }
     }
 
     pub fn binary_path(&self) -> Option<&Path> {
@@ -69,13 +74,12 @@ where
     }
 
     pub fn download(&self) -> Result<(), DownloadError> {
-        let tag = format!("v{}", self.version);
         let platform = layout::target_platform();
 
-        self.clean_dir(&self.content_path)?;
+        self.clean_dir(&self.caches_path)?;
         let zip_name = self
             .downloader
-            .download(&tag, platform, &self.content_path)?;
+            .download(&self.version, platform, &self.caches_path)?;
         self.extract_zip(&zip_name)?;
 
         match (self.binary_path(), self.include_path()) {
@@ -98,7 +102,7 @@ where
     }
 
     fn extract_zip(&self, name: &str) -> Result<(), std::io::Error> {
-        let mut path = PathBuf::from(&self.content_path);
+        let mut path = PathBuf::from(&self.caches_path);
         path.push(name);
 
         let mut file = std::fs::File::open(&path)?;
@@ -152,3 +156,16 @@ impl From<reqwest::Error> for DownloadError {
         DownloadError::Request(e)
     }
 }
+
+impl fmt::Display for DownloadError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        match self {
+            DownloadError::Io(e) => e.fmt(f),
+            DownloadError::Request(e) => e.fmt(f),
+            DownloadError::NotFound => write!(f, "not found"),
+            DownloadError::Corrupted => write!(f, "corrupted"),
+        }
+    }
+}
+
+impl Error for DownloadError {}

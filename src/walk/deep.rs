@@ -1,16 +1,19 @@
 use std::collections::HashSet;
 use std::io;
 use std::path::PathBuf;
+use std::rc::Rc;
 
-use super::{Directory, EntryType};
+use crate::walk::directory::{Directory, EntryType};
+use crate::walk::Walker;
 
-pub struct DeepProtoWalker<'e> {
+#[derive(Debug)]
+pub struct DeepProtoWalker {
     children: Vec<Directory>,
-    exclude: &'e HashSet<PathBuf>,
+    exclude: Rc<HashSet<PathBuf>>,
 }
 
-impl<'e> DeepProtoWalker<'e> {
-    pub fn new<P: Into<PathBuf>>(path: P, exclude: &'e HashSet<PathBuf>) -> Self {
+impl DeepProtoWalker {
+    pub fn new<P: Into<PathBuf>>(path: P, exclude: Rc<HashSet<PathBuf>>) -> Self {
         let children = vec![Directory::new(path)];
         Self { children, exclude }
     }
@@ -20,7 +23,7 @@ impl<'e> DeepProtoWalker<'e> {
     }
 }
 
-impl Iterator for DeepProtoWalker<'_> {
+impl Iterator for DeepProtoWalker {
     type Item = io::Result<PathBuf>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -59,3 +62,5 @@ impl Iterator for DeepProtoWalker<'_> {
         None
     }
 }
+
+impl Walker for DeepProtoWalker {}
