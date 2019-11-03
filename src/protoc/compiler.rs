@@ -1,6 +1,6 @@
-use std::path::PathBuf;
 use std::ffi::OsString;
 use std::io;
+use std::path::PathBuf;
 
 use crate::config;
 use crate::walk;
@@ -18,7 +18,7 @@ pub struct Plugin {
     name: String,
     path: Option<PathBuf>,
     output: PathBuf,
-    options: Vec<String>,
+    options: Option<String>,
 }
 
 impl Compiler {
@@ -78,12 +78,12 @@ impl Plugin {
             name,
             path: None,
             output,
-            options: vec![],
+            options: None,
         }
     }
 
-    pub fn add_option(&mut self, option: String) {
-        self.options.push(option)
+    pub fn set_options(&mut self, options: String) {
+        self.options = Some(options);
     }
 
     pub fn set_path<P: Into<PathBuf>>(&mut self, path: P) {
@@ -91,7 +91,6 @@ impl Plugin {
     }
 
     pub fn args(self) -> Vec<OsString> {
-        let options = self.options.join(",").into();
         let mut plugin = OsString::new();
 
         plugin.push(format!("protoc-gen-{}", self.name));
@@ -100,14 +99,19 @@ impl Plugin {
             plugin.push(path);
         }
 
-        vec![
-            format!("--{}_out", self.name).into(),
-            self.output.into_os_string(),
-            format!("--{}_opt", self.name).into(),
-            options,
+        let mut args = vec![
             OsString::from("--plugin"),
             plugin,
-        ]
+            format!("--{}_out", self.name).into(),
+            self.output.into_os_string(),
+        ];
+
+        if let Some(options) = self.options {
+            args.push(format!("--{}_opt", self.name).into());
+            args.push(options.into());
+        }
+
+        args
     }
 }
 
@@ -118,7 +122,7 @@ impl From<config::Plugin> for Plugin {
             plugin.set_path(path);
         }
 
-        p.options.into_iter().for_each(|o| plugin.add_option(o));
+        plugin.set_options(p.options);
         plugin
     }
 }

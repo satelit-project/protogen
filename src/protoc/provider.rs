@@ -1,9 +1,9 @@
 mod github;
 mod layout;
 
-use std::path::{Path, PathBuf};
-use std::fmt;
 use std::error::Error;
+use std::fmt;
+use std::path::{Path, PathBuf};
 
 use semver::Version;
 use zip::ZipArchive;
@@ -36,7 +36,7 @@ where
 {
     pub fn new<P: Into<PathBuf>>(version: &Version, downloader: D, caches_path: P) -> Self {
         let version = format!("v{}", version);
-        
+
         let mut caches_path = caches_path.into();
         caches_path.push(&version);
 

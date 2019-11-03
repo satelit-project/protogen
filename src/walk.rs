@@ -1,5 +1,5 @@
-pub mod directory;
 pub mod deep;
+pub mod directory;
 
 use std::collections::HashSet;
 use std::fs::{self, ReadDir};
@@ -8,7 +8,7 @@ use std::marker::PhantomData;
 use std::path::PathBuf;
 use std::rc::Rc;
 
-pub trait Walker: Iterator<Item = io::Result<PathBuf>> { }
+pub trait Walker: Iterator<Item = io::Result<PathBuf>> {}
 
 #[derive(Debug)]
 pub struct PagingProtoWalker<F, W> {
@@ -89,7 +89,7 @@ where
 
 impl<F, W> Clone for PagingProtoWalker<F, W>
 where
-    F: Clone
+    F: Clone,
 {
     fn clone(&self) -> Self {
         PagingProtoWalker {
