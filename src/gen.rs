@@ -45,7 +45,11 @@ impl Generator {
             let compiler = self.make_compiler(plugin, includes)?;
 
             for page in walker.clone() {
-                let page = page.map_err(|e| GenerateError::ReadDirFailed(e))?;
+                let mut page = page.map_err(|e| GenerateError::ReadDirFailed(e))?.peekable();
+                if page.peek().is_none() {
+                    continue;
+                }
+
                 let mut command = self.command_for_page(compiler.clone(), page)?;
                 command.current_dir(&self.root_path);
                 let mut child = command.spawn().map_err(|e| GenerateError::ProtocFailed(e))?;
@@ -152,3 +156,5 @@ impl fmt::Display for GenerateError {
 }
 
 impl error::Error for GenerateError {}
+
+impl Walker for std::iter::Peekable<DeepProtoWalker> {}

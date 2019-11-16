@@ -8,7 +8,6 @@ use serde::Deserialize;
 pub struct Config {
     pub protoc: Protoc,
     pub plugins: Vec<Plugin>,
-    pub go: Option<GoConfig>,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -26,10 +25,4 @@ pub struct Plugin {
     pub output: PathBuf,
     pub options: String,
     pub path: Option<PathBuf>,
-}
-
-#[derive(Deserialize, Debug, Clone)]
-#[serde(deny_unknown_fields)]
-pub struct GoConfig {
-    pub module: String,
 }

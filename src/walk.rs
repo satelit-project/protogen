@@ -8,6 +8,7 @@ use std::marker::PhantomData;
 use std::path::PathBuf;
 use std::rc::Rc;
 
+// type Walker = impl Iterator is not supported yet
 pub trait Walker: Iterator<Item = io::Result<PathBuf>> {}
 
 #[derive(Debug)]
