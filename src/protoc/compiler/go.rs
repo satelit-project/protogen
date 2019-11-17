@@ -31,12 +31,11 @@ pub struct GoCompiler {
 
 impl GoCompiler {
     pub fn new<P: Into<PathBuf>, I: Into<PathBuf>>(path: P, plugin: Plugin, compiler_includes: Option<I>) -> Result<Self, GoError> {
-        let path = path.into();
-        let module = derive_module(&path)?;
-        let mut package_path = package_path(&path)?;
+        let module = derive_module(plugin.output())?;
+        let mut package_path = package_path(plugin.output())?;
         package_path.push(module);
 
-        let compiler = PlainCompiler::new(path, plugin);
+        let compiler = PlainCompiler::new(path.into(), plugin);
         let import_path = package_path.join("/");
         Ok(Self {
             compiler,
@@ -87,14 +86,13 @@ impl Compiler for GoCompiler {
 }
 
 fn derive_module(out_path: &Path) -> Result<String, GoError> {
-    dbg!(out_path);
     let output = Command::new("go")
         .args(&["list", "-m"])
-        .current_dir(out_path)
+        .current_dir(&out_path)
         .output()?;
 
     let module = String::from_utf8(output.stdout)?;
-    Ok(dbg!(module))
+    Ok(module)
 }
 
 fn package_path(out_path: &Path) -> Result<Vec<String>, GoError> {
@@ -103,7 +101,6 @@ fn package_path(out_path: &Path) -> Result<Vec<String>, GoError> {
         let content = fs::read_dir(ancestor)?;
         for entry in content {
             let entry = entry?;
-            dbg!(&entry);
             if entry.file_name() == "go.mod" {
                 return Ok(path);
             }

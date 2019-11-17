@@ -6,7 +6,7 @@ pub use plain::PlainCompiler;
 
 use std::ffi::OsString;
 use std::io;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use crate::config;
 use crate::walk;
@@ -66,6 +66,10 @@ impl Plugin {
 
     pub fn name(&self) -> &str {
         &self.name    
+    }
+
+    pub fn output(&self) -> &Path {
+        &self.output    
     }
 
     pub fn add_option<O: Into<String>>(&mut self, option: O) {
