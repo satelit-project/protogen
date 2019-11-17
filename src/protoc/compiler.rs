@@ -1,3 +1,9 @@
+pub mod go;
+pub mod plain;
+
+pub use go::GoCompiler;
+pub use plain::PlainCompiler;
+
 use std::ffi::OsString;
 use std::io;
 use std::path::PathBuf;
@@ -5,12 +11,39 @@ use std::path::PathBuf;
 use crate::config;
 use crate::walk;
 
-#[derive(Debug, Clone)]
-pub struct Compiler {
-    path: PathBuf,
-    include_paths: Vec<PathBuf>,
-    plugin: Plugin,
-    proto_paths: Vec<PathBuf>,
+pub trait Compiler: Clone {
+    fn add_include<P: Into<PathBuf>>(&mut self, path: P) -> io::Result<()>;
+    fn set_protos<W: walk::Walker>(&mut self, protos: W) -> io::Result<()>;
+    fn command(self) -> Vec<OsString>;
+}
+
+#[derive(Clone)]
+pub enum AnyCompiler {
+    Plain(PlainCompiler),
+    Go(GoCompiler),
+}
+
+impl Compiler for AnyCompiler {
+    fn add_include<P: Into<PathBuf>>(&mut self, path: P) -> io::Result<()> { 
+        match self {
+            AnyCompiler::Plain(c) => c.add_include(path),
+            AnyCompiler::Go(c) => c.add_include(path),
+        }
+    }
+
+    fn set_protos<W: walk::Walker>(&mut self, protos: W) -> io::Result<()> { 
+        match self {
+            AnyCompiler::Plain(c) => c.set_protos(protos),
+            AnyCompiler::Go(c) => c.set_protos(protos),
+        }
+    }
+
+    fn command(self) -> Vec<OsString> { 
+        match self {
+            AnyCompiler::Plain(c) => c.command(),
+            AnyCompiler::Go(c) => c.command(),
+        }    
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -18,58 +51,7 @@ pub struct Plugin {
     name: String,
     path: Option<PathBuf>,
     output: PathBuf,
-    options: Option<String>,
-}
-
-impl Compiler {
-    pub fn new<P: Into<PathBuf>>(path: P, plugin: Plugin) -> Self {
-        let include_paths = vec![];
-        let proto_paths = vec![];
-
-        Self {
-            path: path.into(),
-            include_paths,
-            plugin,
-            proto_paths,
-        }
-    }
-
-    pub fn add_include<P: Into<PathBuf>>(&mut self, path: P) {
-        self.include_paths.push(path.into());
-    }
-
-    pub fn set_protos<W: walk::Walker>(&mut self, protos: W) -> io::Result<()> {
-        let mut buf = vec![];
-        match protos.size_hint() {
-            (x, Some(y)) => buf.reserve(y - x),
-            _ => (),
-        }
-
-        for proto in protos {
-            buf.push(proto?);
-        }
-
-        self.proto_paths = buf;
-        Ok(())
-    }
-
-    pub fn command(self) -> Vec<OsString> {
-        let mut buf = vec![];
-        buf.reserve(self.include_paths.len() * 2 + self.proto_paths.len());
-
-        buf.push(self.path.into_os_string());
-        for include in self.include_paths {
-            buf.push("-I".into());
-            buf.push(include.into_os_string());
-        }
-
-        buf.append(&mut self.plugin.args());
-        for proto in self.proto_paths {
-            buf.push(proto.into_os_string());
-        }
-
-        buf
-    }
+    options: Vec<String>,
 }
 
 impl Plugin {
@@ -78,12 +60,16 @@ impl Plugin {
             name,
             path: None,
             output,
-            options: None,
+            options: vec![],
         }
     }
 
-    pub fn set_options(&mut self, options: String) {
-        self.options = Some(options);
+    pub fn name(&self) -> &str {
+        &self.name    
+    }
+
+    pub fn add_option<O: Into<String>>(&mut self, option: O) {
+        self.options.push(option.into());
     }
 
     pub fn set_path<P: Into<PathBuf>>(&mut self, path: P) {
@@ -106,10 +92,8 @@ impl Plugin {
             self.output.into_os_string(),
         ];
 
-        if let Some(options) = self.options {
-            args.push(format!("--{}_opt", self.name).into());
-            args.push(options.into());
-        }
+        args.push(format!("--{}_opt", self.name).into());
+        args.push(self.options.join(",").into());
 
         args
     }
@@ -122,7 +106,10 @@ impl From<config::Plugin> for Plugin {
             plugin.set_path(path);
         }
 
-        plugin.set_options(p.options);
+        for option in p.options.split(",") {
+            plugin.add_option(option);
+        }
+
         plugin
     }
 }

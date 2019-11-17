@@ -9,7 +9,8 @@ use std::rc::Rc;
 use directories::BaseDirs;
 
 use crate::config::Config;
-use crate::protoc::compiler::{Compiler, Plugin};
+use crate::protoc::compiler::{Compiler, AnyCompiler, PlainCompiler, GoCompiler, Plugin};
+use crate::protoc::compiler::go::GoError;
 use crate::protoc::provider::{DownloadError, GithubDownloader, ProtocProvider};
 use crate::walk::{deep::DeepProtoWalker, PagingProtoWalker, Walker};
 
@@ -60,8 +61,9 @@ impl Generator {
         Ok(())
     }
 
-    fn command_for_page<W>(&self, mut compiler: Compiler, page: W) -> Result<Command, GenerateError>
+    fn command_for_page<C, W>(&self, mut compiler: C, page: W) -> Result<Command, GenerateError>
     where
+        C: Compiler,
         W: Walker,
     {
         compiler
@@ -84,7 +86,7 @@ impl Generator {
         &self,
         plugin: Plugin,
         includes: Option<Vec<PathBuf>>,
-    ) -> Result<Compiler, GenerateError> {
+    ) -> Result<impl Compiler, GenerateError> {
         let dirs = BaseDirs::new()
             .ok_or_else(|| GenerateError::NoProtoc(Box::new("can't create protoc cache")))?;
         let caches_path = dirs.cache_dir();
@@ -100,14 +102,20 @@ impl Generator {
             .binary_path()
             .ok_or_else(|| GenerateError::NoProtoc(Box::new("no protoc binary found")))?;
 
-        let mut compiler = Compiler::new(protoc_path, plugin);
+        let mut compiler = match plugin.name() {
+            "go" => AnyCompiler::Go(GoCompiler::new(protoc_path, plugin, provider.include_path())?),
+            _ => AnyCompiler::Plain(PlainCompiler::new(protoc_path, plugin)),
+        };
+
         if let Some(path) = provider.include_path() {
-            compiler.add_include(path);
+            compiler.add_include(path).map_err(|e| GenerateError::ProtocFailed(e))?;    
         }
 
-        compiler.add_include(&self.root_path);
+        compiler.add_include(&self.root_path).map_err(|e| GenerateError::ProtocFailed(e))?;    
         if let Some(includes) = includes {
-            includes.into_iter().for_each(|i| compiler.add_include(i));
+            for include in includes {
+                compiler.add_include(include).map_err(|e| GenerateError::ProtocFailed(e))?;    
+            }
         }
 
         Ok(compiler)
@@ -141,6 +149,12 @@ impl Generator {
 impl From<DownloadError> for GenerateError {
     fn from(e: DownloadError) -> Self {
         GenerateError::NoProtoc(Box::new(e))
+    }
+}
+
+impl From<GoError> for GenerateError {
+    fn from(e: GoError) -> Self { 
+        GenerateError::InvocationFailed(Box::new(e))
     }
 }
 
