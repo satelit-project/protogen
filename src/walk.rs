@@ -92,7 +92,7 @@ where
                     let make = &self.make_walker;
                     let exclude = self.exclude.get_or_insert_with(|| Rc::new(HashSet::new()));
                     let walker = make(entry.path(), Rc::clone(exclude));
-                    return Some(Ok(walker))
+                    return Some(Ok(walker));
                 }
             }
         }

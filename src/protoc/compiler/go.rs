@@ -1,16 +1,16 @@
+use std::collections::HashSet;
 use std::ffi::{OsStr, OsString};
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::string;
 use std::rc::Rc;
-use std::collections::HashSet;
+use std::string;
 
-use crate::walk;
 use super::plain::PlainCompiler;
 use super::Compiler;
 use super::Plugin;
+use crate::walk;
 
 #[derive(Debug)]
 pub enum GoError {
@@ -24,13 +24,14 @@ pub enum GoError {
 pub struct GoCompiler {
     compiler: PlainCompiler,
     import_path: String,
-    
+    output_excludes: Option<Rc<HashSet<PathBuf>>>,
+
     // TODO: use protoc to get go_module option from google's protos
     compiler_includes: Option<PathBuf>,
 }
 
 impl GoCompiler {
-    pub fn new<P: Into<PathBuf>, I: Into<PathBuf>>(path: P, plugin: Plugin, compiler_includes: Option<I>) -> Result<Self, GoError> {
+    pub fn new<P: Into<PathBuf>>(path: P, plugin: Plugin) -> Result<Self, GoError> {
         let module = derive_module(plugin.output())?;
         let mut package_path = package_path(plugin.output())?;
         package_path.push(module);
@@ -41,18 +42,38 @@ impl GoCompiler {
         Ok(Self {
             compiler,
             import_path,
-            compiler_includes: compiler_includes.map(|i| i.into()),
+            output_excludes: None,
+            compiler_includes: None,
         })
+    }
+
+    pub fn set_compiler_includes<I>(&mut self, includes: I)
+    where
+        I: Into<PathBuf>,
+    {
+        self.compiler_includes = Some(includes.into());
+    }
+
+    pub fn set_output_exludes<I, P>(&mut self, excludes: I)
+    where
+        I: Iterator<Item = P>,
+        P: Into<PathBuf>,
+    {
+        self.output_excludes = Some(Rc::new(excludes.map(|p| p.into()).collect()));
     }
 
     // TODO: protoc to get 'go_module' and handle conversion errors
     fn map_packages(&mut self, path: &Path) -> io::Result<()> {
-        let walker = walk::deep::DeepProtoWalker::new(path, Rc::new(HashSet::new()));    
+        let excludes = self
+            .output_excludes
+            .get_or_insert_with(|| Rc::new(HashSet::new()));
+        let walker = walk::deep::DeepProtoWalker::new(path, excludes.clone());
+
         for proto in walker {
             let proto = proto?;
             let mut relative_path = proto.strip_prefix(path).expect("unrelated proto");
             let mut mapping = format!("M{}=", relative_path.to_str().expect("utf-8 path expected"));
-            
+
             relative_path = relative_path.parent().expect("not a proto");
             mapping.push_str(&self.import_path);
             mapping.push_str("/");
@@ -76,14 +97,13 @@ impl Compiler for GoCompiler {
         self.compiler.add_include(path)
     }
 
-    fn set_protos<W: walk::Walker>(&mut self, protos: W) -> io::Result<()> { 
+    fn set_protos<W: walk::Walker>(&mut self, protos: W) -> io::Result<()> {
         self.compiler.set_protos(protos)
     }
 
-    fn command(self) -> Vec<OsString> { 
+    fn command(self) -> Vec<OsString> {
         self.compiler.command()
     }
-
 }
 
 fn derive_module(out_path: &Path) -> Result<String, GoError> {

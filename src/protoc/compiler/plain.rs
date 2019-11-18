@@ -1,6 +1,6 @@
-use std::path::PathBuf;
 use std::ffi::OsString;
 use std::io;
+use std::path::PathBuf;
 
 use super::Compiler;
 use super::Plugin;
@@ -28,7 +28,7 @@ impl PlainCompiler {
     }
 
     pub(super) fn plugin_mut(&mut self) -> &mut Plugin {
-        &mut self.plugin    
+        &mut self.plugin
     }
 }
 

@@ -9,8 +9,8 @@ use std::rc::Rc;
 use directories::BaseDirs;
 
 use crate::config::Config;
-use crate::protoc::compiler::{Compiler, AnyCompiler, PlainCompiler, GoCompiler, Plugin};
 use crate::protoc::compiler::go::GoError;
+use crate::protoc::compiler::{AnyCompiler, Compiler, GoCompiler, PlainCompiler, Plugin};
 use crate::protoc::provider::{DownloadError, GithubDownloader, ProtocProvider};
 use crate::walk::{deep::DeepProtoWalker, PagingProtoWalker, Walker};
 
@@ -42,18 +42,23 @@ impl Generator {
 
         for plugin_cfg in &self.config.plugins {
             let plugin: Plugin = plugin_cfg.into();
-            let includes = self.config.protoc.include.as_ref().map(|i| i.clone());
-            let compiler = self.make_compiler(plugin, includes)?;
+            let compiler = self.make_compiler(plugin)?;
 
             for page in walker.clone() {
-                let mut page = page.map_err(|e| GenerateError::ReadDirFailed(e))?.peekable();
+                let mut page = page
+                    .map_err(|e| GenerateError::ReadDirFailed(e))?
+                    .peekable();
+
                 if page.peek().is_none() {
                     continue;
                 }
 
                 let mut command = self.command_for_page(compiler.clone(), page)?;
                 command.current_dir(&self.root_path);
-                let mut child = command.spawn().map_err(|e| GenerateError::ProtocFailed(e))?;
+                
+                let mut child = command
+                    .spawn()
+                    .map_err(|e| GenerateError::ProtocFailed(e))?;
                 child.wait().map_err(|e| GenerateError::ProtocFailed(e))?;
             }
         }
@@ -82,11 +87,7 @@ impl Generator {
         Ok(cmd)
     }
 
-    fn make_compiler(
-        &self,
-        plugin: Plugin,
-        includes: Option<Vec<PathBuf>>,
-    ) -> Result<impl Compiler, GenerateError> {
+    fn make_compiler(&self, plugin: Plugin) -> Result<impl Compiler, GenerateError> {
         let dirs = BaseDirs::new()
             .ok_or_else(|| GenerateError::NoProtoc(Box::new("can't create protoc cache")))?;
         let caches_path = dirs.cache_dir();
@@ -103,18 +104,37 @@ impl Generator {
             .ok_or_else(|| GenerateError::NoProtoc(Box::new("no protoc binary found")))?;
 
         let mut compiler = match plugin.name() {
-            "go" => AnyCompiler::Go(GoCompiler::new(protoc_path, plugin, provider.include_path())?),
+            "go" => {
+                let mut compiler = GoCompiler::new(protoc_path, plugin)?;
+
+                if let Some(path) = provider.include_path() {
+                    compiler.set_compiler_includes(path);
+                }
+
+                if let Some(ref paths) = self.config.protoc.exclude {
+                    compiler.set_output_exludes(paths.iter())
+                }
+
+                AnyCompiler::Go(compiler)
+            }
             _ => AnyCompiler::Plain(PlainCompiler::new(protoc_path, plugin)),
         };
 
         if let Some(path) = provider.include_path() {
-            compiler.add_include(path).map_err(|e| GenerateError::ProtocFailed(e))?;    
+            compiler
+                .add_include(path)
+                .map_err(|e| GenerateError::ProtocFailed(e))?;
         }
 
-        compiler.add_include(&self.root_path).map_err(|e| GenerateError::ProtocFailed(e))?;    
-        if let Some(includes) = includes {
-            for include in includes {
-                compiler.add_include(include).map_err(|e| GenerateError::ProtocFailed(e))?;    
+        compiler
+            .add_include(&self.root_path)
+            .map_err(|e| GenerateError::ProtocFailed(e))?;
+
+        if let Some(ref includes) = self.config.protoc.include {
+            for include in includes.iter() {
+                compiler
+                    .add_include(include)
+                    .map_err(|e| GenerateError::ProtocFailed(e))?;
             }
         }
 
@@ -153,7 +173,7 @@ impl From<DownloadError> for GenerateError {
 }
 
 impl From<GoError> for GenerateError {
-    fn from(e: GoError) -> Self { 
+    fn from(e: GoError) -> Self {
         GenerateError::InvocationFailed(Box::new(e))
     }
 }
@@ -164,7 +184,7 @@ impl fmt::Display for GenerateError {
             GenerateError::NoProtoc(e) => write!(f, "Proto compiler not found: {:?}", e),
             GenerateError::ReadDirFailed(e) => write!(f, "Failed to read directory: {}", e),
             GenerateError::InvocationFailed(e) => write!(f, "Protoc invocation failed: {:?}", e),
-            GenerateError::ProtocFailed(e) => write!(f, "Protoc returned error: {}", e)
+            GenerateError::ProtocFailed(e) => write!(f, "Protoc returned error: {}", e),
         }
     }
 }

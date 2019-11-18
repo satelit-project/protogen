@@ -35,7 +35,10 @@ impl GithubDownloader {
         path.push(&asset.name);
 
         let mut zip = std::fs::File::create(&path)?;
-        self.client.get(&asset.browser_download_url).send()?.copy_to(&mut zip)?;
+        self.client
+            .get(&asset.browser_download_url)
+            .send()?
+            .copy_to(&mut zip)?;
 
         Ok(asset.name)
     }

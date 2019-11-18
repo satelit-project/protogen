@@ -48,7 +48,7 @@ fn root_dir(path: &Path) -> Result<PathBuf, failure::Error> {
 
     let mut cwd = std::env::current_dir()?;
     cwd.push(path);
-    
+
     let mut root = cwd.canonicalize()?;
     root.pop();
     Ok(root)

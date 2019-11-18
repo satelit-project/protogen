@@ -24,25 +24,25 @@ pub enum AnyCompiler {
 }
 
 impl Compiler for AnyCompiler {
-    fn add_include<P: Into<PathBuf>>(&mut self, path: P) -> io::Result<()> { 
+    fn add_include<P: Into<PathBuf>>(&mut self, path: P) -> io::Result<()> {
         match self {
             AnyCompiler::Plain(c) => c.add_include(path),
             AnyCompiler::Go(c) => c.add_include(path),
         }
     }
 
-    fn set_protos<W: walk::Walker>(&mut self, protos: W) -> io::Result<()> { 
+    fn set_protos<W: walk::Walker>(&mut self, protos: W) -> io::Result<()> {
         match self {
             AnyCompiler::Plain(c) => c.set_protos(protos),
             AnyCompiler::Go(c) => c.set_protos(protos),
         }
     }
 
-    fn command(self) -> Vec<OsString> { 
+    fn command(self) -> Vec<OsString> {
         match self {
             AnyCompiler::Plain(c) => c.command(),
             AnyCompiler::Go(c) => c.command(),
-        }    
+        }
     }
 }
 
@@ -65,11 +65,11 @@ impl Plugin {
     }
 
     pub fn name(&self) -> &str {
-        &self.name    
+        &self.name
     }
 
     pub fn output(&self) -> &Path {
-        &self.output    
+        &self.output
     }
 
     pub fn add_option<O: Into<String>>(&mut self, option: O) {
