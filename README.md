@@ -1,11 +1,10 @@
 # protogen
-==========
 
-A tool to simplify protoc invocation
+A tool to simplify protoc invocation.
 
 ## Dependencies
 
-Latest **stable** Rust is required. To use Go plugin, Go 1.13 is required (probably earlier versions with Go Molules support too).
+Latest **stable** Rust is required. To use Go plugin, Go 1.13 is required (probably earlier versions with Go Molules supported too).
 
 ## Usage
 
