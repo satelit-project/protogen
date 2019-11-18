@@ -34,6 +34,7 @@ impl GoCompiler {
         let module = derive_module(plugin.output())?;
         let mut package_path = package_path(plugin.output())?;
         package_path.push(module);
+        package_path.reverse();
 
         let compiler = PlainCompiler::new(path.into(), plugin);
         let import_path = package_path.join("/");
@@ -91,7 +92,11 @@ fn derive_module(out_path: &Path) -> Result<String, GoError> {
         .current_dir(&out_path)
         .output()?;
 
-    let module = String::from_utf8(output.stdout)?;
+    let mut module = String::from_utf8(output.stdout)?;
+    if module.ends_with("\n") {
+        module.truncate(module.len() - 1);
+    }
+
     Ok(module)
 }
 
@@ -118,7 +123,7 @@ fn package_path(out_path: &Path) -> Result<Vec<String>, GoError> {
     Err(GoError::NoModules)
 }
 
-fn package_path_from_path<'p>(path: &'p OsStr) -> Result<&'p str, GoError> {
+fn package_path_from_path(path: &OsStr) -> Result<&str, GoError> {
     let package = match path.to_str() {
         Some(p) => p,
         None => {

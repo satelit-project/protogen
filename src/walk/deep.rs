@@ -51,7 +51,7 @@ impl Iterator for DeepProtoWalker {
             };
 
             if package_empty {
-                self.children.pop();
+                self.children.swap_remove(0);
             }
 
             if let Some(path) = push_package {
