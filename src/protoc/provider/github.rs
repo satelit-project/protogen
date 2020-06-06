@@ -4,8 +4,7 @@ use regex::Regex;
 use reqwest::Client;
 use serde::Deserialize;
 
-use super::DownloadError;
-use super::ProtocDownloader;
+use super::{DownloadError, ProtocDownloader};
 use std::time::Duration;
 
 pub struct GithubDownloader {

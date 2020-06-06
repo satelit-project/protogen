@@ -6,8 +6,7 @@ edition = "2018"
 
 [dependencies]
 structopt = "0.3.3"
-failure = "0.1.6"
-exitfailure = "0.5.1"
+anyhow = "1.0.31"
 
 serde = { version = "1.0.102", features = ["derive"] }
 toml = "0.5.5"

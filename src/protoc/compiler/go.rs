@@ -1,15 +1,14 @@
-use std::collections::HashSet;
-use std::ffi::{OsStr, OsString};
-use std::fs;
-use std::io;
-use std::path::{Path, PathBuf};
-use std::process::Command;
-use std::rc::Rc;
-use std::string;
+use std::{
+    collections::HashSet,
+    ffi::{OsStr, OsString},
+    fs, io,
+    path::{Path, PathBuf},
+    process::Command,
+    rc::Rc,
+    string,
+};
 
-use super::plain::PlainCompiler;
-use super::Compiler;
-use super::Plugin;
+use super::{plain::PlainCompiler, Compiler, Plugin};
 use crate::walk;
 
 #[derive(Debug)]
@@ -149,7 +148,7 @@ fn package_path_from_path(path: &OsStr) -> Result<&str, GoError> {
         None => {
             return Err(GoError::Parsing(
                 "failed to convert Path to String".to_owned(),
-            ))
+            ));
         }
     };
 

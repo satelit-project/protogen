@@ -1,6 +1,8 @@
-use std::fs::{self, DirEntry, ReadDir};
-use std::io;
-use std::path::PathBuf;
+use std::{
+    fs::{self, DirEntry, ReadDir},
+    io,
+    path::PathBuf,
+};
 
 #[derive(Debug)]
 pub struct Directory {

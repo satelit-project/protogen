@@ -1,10 +1,9 @@
-use std::collections::HashSet;
-use std::io;
-use std::path::PathBuf;
-use std::rc::Rc;
+use std::{collections::HashSet, io, path::PathBuf, rc::Rc};
 
-use crate::walk::directory::{Directory, EntryType};
-use crate::walk::Walker;
+use crate::walk::{
+    directory::{Directory, EntryType},
+    Walker,
+};
 
 #[derive(Debug)]
 pub struct DeepProtoWalker {

@@ -4,12 +4,13 @@ pub mod plain;
 pub use go::GoCompiler;
 pub use plain::PlainCompiler;
 
-use std::ffi::OsString;
-use std::io;
-use std::path::{Path, PathBuf};
+use std::{
+    ffi::OsString,
+    io,
+    path::{Path, PathBuf},
+};
 
-use crate::config;
-use crate::walk;
+use crate::{config, walk};
 
 pub trait Compiler: Clone {
     fn add_include<P: Into<PathBuf>>(&mut self, path: P) -> io::Result<()>;
@@ -110,8 +111,10 @@ impl From<config::Plugin> for Plugin {
             plugin.set_path(path);
         }
 
-        for option in p.options.split(",") {
-            plugin.add_option(option);
+        if let Some(options) = p.options.as_ref() {
+            for option in options.split(",") {
+                plugin.add_option(option);
+            }
         }
 
         plugin

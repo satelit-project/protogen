@@ -1,18 +1,15 @@
-use std::collections::HashSet;
-use std::error;
-use std::fmt;
-use std::io;
-use std::path::PathBuf;
-use std::process::Command;
-use std::rc::Rc;
+use std::{collections::HashSet, error, fmt, io, path::PathBuf, process::Command, rc::Rc};
 
 use directories::BaseDirs;
 
-use crate::config::Config;
-use crate::protoc::compiler::go::GoError;
-use crate::protoc::compiler::{AnyCompiler, Compiler, GoCompiler, PlainCompiler, Plugin};
-use crate::protoc::provider::{DownloadError, GithubDownloader, ProtocProvider};
-use crate::walk::{deep::DeepProtoWalker, PagingProtoWalker, Walker};
+use crate::{
+    config::Config,
+    protoc::{
+        compiler::{go::GoError, AnyCompiler, Compiler, GoCompiler, PlainCompiler, Plugin},
+        provider::{DownloadError, GithubDownloader, ProtocProvider},
+    },
+    walk::{deep::DeepProtoWalker, PagingProtoWalker, Walker},
+};
 
 #[derive(Debug)]
 pub enum GenerateError {
@@ -55,7 +52,7 @@ impl Generator {
 
                 let mut command = self.command_for_page(compiler.clone(), page)?;
                 command.current_dir(&self.root_path);
-                
+
                 let mut child = command
                     .spawn()
                     .map_err(|e| GenerateError::ProtocFailed(e))?;

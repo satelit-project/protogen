@@ -1,12 +1,14 @@
 pub mod deep;
 pub mod directory;
 
-use std::collections::HashSet;
-use std::fs::{self, ReadDir};
-use std::io;
-use std::marker::PhantomData;
-use std::path::PathBuf;
-use std::rc::Rc;
+use std::{
+    collections::HashSet,
+    fs::{self, ReadDir},
+    io,
+    marker::PhantomData,
+    path::PathBuf,
+    rc::Rc,
+};
 
 // type Walker = impl Iterator is not supported yet
 pub trait Walker: Iterator<Item = io::Result<PathBuf>> {}

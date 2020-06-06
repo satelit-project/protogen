@@ -1,9 +1,6 @@
-use std::ffi::OsString;
-use std::io;
-use std::path::PathBuf;
+use std::{ffi::OsString, io, path::PathBuf};
 
-use super::Compiler;
-use super::Plugin;
+use super::{Compiler, Plugin};
 use crate::walk;
 
 #[derive(Debug, Clone)]

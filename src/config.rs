@@ -23,6 +23,6 @@ pub struct Protoc {
 pub struct Plugin {
     pub name: String,
     pub output: PathBuf,
-    pub options: String,
     pub path: Option<PathBuf>,
+    pub options: Option<String>,
 }

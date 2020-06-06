@@ -1,15 +1,14 @@
-use std::fs::File;
-use std::io::Read;
-use std::path::{Path, PathBuf};
+use std::{
+    fs::File,
+    io::Read,
+    path::{Path, PathBuf},
+};
 
-use exitfailure;
-use failure;
+use anyhow::{self, Context};
 use structopt::StructOpt;
 use toml;
 
-use failure::ResultExt;
-use protogen::config;
-use protogen::gen;
+use protogen::{config, gen};
 
 #[derive(Debug, StructOpt)]
 #[structopt(name = "protogen")]
@@ -21,7 +20,7 @@ struct Args {
     config: PathBuf,
 }
 
-fn main() -> Result<(), exitfailure::ExitFailure> {
+fn main() -> anyhow::Result<()> {
     let args = Args::from_args();
     let config_path = root_dir(&args.config)?;
     let config = parse_config(&args.config)?;
@@ -32,16 +31,16 @@ fn main() -> Result<(), exitfailure::ExitFailure> {
     Ok(())
 }
 
-fn parse_config(path: &Path) -> Result<config::Config, failure::Error> {
-    let mut file = File::open(path).with_context(|_| format!("failed to open {:?}", path))?;
+fn parse_config(path: &Path) -> anyhow::Result<config::Config> {
+    let mut file = File::open(path).with_context(|| format!("failed to open {:?}", path))?;
     let mut buf = vec![];
     file.read_to_end(&mut buf)?;
 
-    let config = toml::from_slice(&buf).with_context(|_| "failed to parse config")?;
+    let config = toml::from_slice(&buf).with_context(|| "failed to parse config")?;
     Ok(config)
 }
 
-fn root_dir(path: &Path) -> Result<PathBuf, failure::Error> {
+fn root_dir(path: &Path) -> anyhow::Result<PathBuf> {
     if path.is_absolute() {
         return Ok(path.into());
     }

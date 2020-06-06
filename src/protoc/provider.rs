@@ -1,9 +1,11 @@
 mod github;
 mod layout;
 
-use std::error::Error;
-use std::fmt;
-use std::path::{Path, PathBuf};
+use std::{
+    error::Error,
+    fmt,
+    path::{Path, PathBuf},
+};
 
 use semver::Version;
 use zip::ZipArchive;
@@ -141,8 +143,10 @@ where
 
     #[cfg(unix)]
     fn set_permissions(&self, zipfile: &zip::read::ZipFile, path: &Path) -> std::io::Result<()> {
-        use std::fs::{set_permissions, Permissions};
-        use std::os::unix::fs::PermissionsExt;
+        use std::{
+            fs::{set_permissions, Permissions},
+            os::unix::fs::PermissionsExt,
+        };
 
         if let Some(mode) = zipfile.unix_mode() {
             return set_permissions(&path, Permissions::from_mode(mode));
