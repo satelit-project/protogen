@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use regex::Regex;
-use reqwest::Client;
+use reqwest::blocking::Client;
 use serde::Deserialize;
 
 use super::{DownloadError, ProtocDownloader};
@@ -73,7 +73,7 @@ impl ProtocDownloader for GithubDownloader {
 
 impl Default for GithubDownloader {
     fn default() -> Self {
-        let client = reqwest::ClientBuilder::new()
+        let client = Client::builder()
             .gzip(true)
             .connect_timeout(Duration::from_secs(30))
             .build()

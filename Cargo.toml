@@ -1,6 +1,6 @@
 [package]
 name = "protogen"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Igor Nikitin <rabbitinspace@icloud.com>"]
 edition = "2018"
 
@@ -10,8 +10,8 @@ anyhow = "1.0.31"
 
 serde = { version = "1.0.102", features = ["derive"] }
 toml = "0.5.5"
-semver = { version = "0.9.0", features = ["serde"] }
+semver = { version = "0.10.0", features = ["serde"] }
 directories = "2.0.2"
-reqwest = "0.9.22"
+reqwest = { version = "0.10.6", features = ["blocking", "json", "gzip"] }
 regex = "1.3.1"
 zip = { version = "0.5.3", features = ["deflate"] }
